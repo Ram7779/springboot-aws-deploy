@@ -1,0 +1,45 @@
+version: 0.2
+
+env:
+  variables:
+    MAVEN_OPTS: '-Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn'
+
+phases:
+  install:
+    commands:
+      - echo Entered the install phase...
+  pre_build:
+    commands:
+      - echo Entered the pre_build phase...
+      - echo Logging in to Amazon ECR...
+      - (Get-ECRLoginCommand).Password | docker login --username AWS --password-stdin 720564216503.dkr.ecr.ap-south-1.amazonaws.com
+      - REPOSITORY_URI=720564216503.dkr.ecr.ap-south-1.amazonaws.com/springboot-demo-ecr
+  build:
+    commands:
+      - echo Entered the build phase...
+      - echo Build started on `date`
+      - mvn clean install
+      - echo Building the Docker image...
+      - docker build -t springboot-demo-ecr .
+      - docker tag springboot-demo-ecr:latest 720564216503.dkr.ecr.ap-south-1.amazonaws.com/springboot-demo-ecr:latest      
+  post_build:
+    commands:
+      - echo Entered the post_build phase...
+      - echo Build completed on `date`
+      - echo Pushing the Docker image...
+      - docker push 720564216503.dkr.ecr.ap-south-1.amazonaws.com/springboot-demo-ecr:latest
+      # give your container name
+      - DOCKER_CONTAINER_NAME=spring-demo-ecr-container
+      - echo $DOCKER_CONTAINER_NAME
+      - echo printing imagedefinitions.json
+      - cat imagedefinitions.json
+
+artifacts:
+  files:
+    - target/*.jar
+    - imagedefinitions.json
+  discard-paths: yes
+
+cache:
+  paths:
+    - '/root/.m2/**/*'
